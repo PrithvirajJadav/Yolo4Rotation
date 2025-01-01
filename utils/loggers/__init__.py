@@ -87,17 +87,20 @@ class Loggers:
         self.plots = not opt.noplots  # plot results
         self.logger = logger  # for printing results to console
         self.include = include
+        #//todo new keys are added
         self.keys = [
             "train/box_loss",
             "train/obj_loss",
-            "train/cls_loss",  # train loss
+            "train/cls_loss",  
+            "train/rot_loss", # train loss
             "metrics/precision",
             "metrics/recall",
             "metrics/mAP_0.5",
             "metrics/mAP_0.5:0.95",  # metrics
             "val/box_loss",
             "val/obj_loss",
-            "val/cls_loss",  # val loss
+            "val/cls_loss",
+            "cal/rot_loss",  # val loss
             "x/lr0",
             "x/lr1",
             "x/lr2",
@@ -254,7 +257,7 @@ class Loggers:
         x = dict(zip(self.keys, vals))
         if self.csv:
             file = self.save_dir / "results.csv"
-            n = len(x) + 1  # number of cols
+            n = len(x) + 1 # number of cols
             s = "" if file.exists() else (("%20s," * n % tuple(["epoch"] + self.keys)).rstrip(",") + "\n")  # add header
             with open(file, "a") as f:
                 f.write(s + ("%20.5g," * n % tuple([epoch] + vals)).rstrip(",") + "\n")

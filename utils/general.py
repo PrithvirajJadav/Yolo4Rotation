@@ -1036,7 +1036,7 @@ def non_max_suppression(
     if mps:  # MPS not fully supported yet, convert tensors to CPU before NMS
         prediction = prediction.cpu()
     bs = prediction.shape[0]  # batch size
-    nc = prediction.shape[2] - nm - 5  # number of classes
+    nc = prediction.shape[2] - nm - 5 - 4 # number of classes #//todo - 4
     xc = prediction[..., 4] > conf_thres  # candidates
 
     # Settings
@@ -1049,7 +1049,7 @@ def non_max_suppression(
     merge = False  # use merge-NMS
 
     t = time.time()
-    mi = 5 + nc  # mask start index
+    mi = 5 + nc  # mask start index #//todo edit this and output is list
     output = [torch.zeros((0, 6 + nm), device=prediction.device)] * bs
     for xi, x in enumerate(prediction):  # image index, image inference
         # Apply constraints

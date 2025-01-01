@@ -6,7 +6,7 @@ import math
 import os
 from copy import copy
 from pathlib import Path
-
+import pdb
 import cv2
 import matplotlib
 import matplotlib.pyplot as plt
@@ -150,6 +150,7 @@ def output_to_target(output, max_det=300):
 
 @threaded
 def plot_images(images, targets, paths=None, fname="images.jpg", names=None):
+    # pdb.set_trace()
     """Plots an image grid with labels from YOLOv5 predictions or targets, saving to `fname`."""
     if isinstance(images, torch.Tensor):
         images = images.cpu().float().numpy()
@@ -192,6 +193,7 @@ def plot_images(images, targets, paths=None, fname="images.jpg", names=None):
             ti = targets[targets[:, 0] == i]  # image targets
             boxes = xywh2xyxy(ti[:, 2:6]).T
             classes = ti[:, 1].astype("int")
+            # print(torch.unique(classes))
             labels = ti.shape[1] == 6  # labels if no conf column
             conf = None if labels else ti[:, 6]  # check for confidence presence (label vs pred)
 

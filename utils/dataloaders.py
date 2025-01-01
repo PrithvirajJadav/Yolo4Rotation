@@ -820,23 +820,24 @@ class LoadImagesAndLabels(Dataset):
             # HSV color-space
             augment_hsv(img, hgain=hyp["hsv_h"], sgain=hyp["hsv_s"], vgain=hyp["hsv_v"])
 
-            # Flip up-down
-            if random.random() < hyp["flipud"]:
-                img = np.flipud(img)
-                if nl:
-                    labels[:, 2] = 1 - labels[:, 2]
+            #//! Need to comment this code for preventing Flipping
+            # Flip up-down 
+            # if random.random() < hyp["flipud"]:
+            #     img = np.flipud(img)
+            #     if nl:
+            #         labels[:, 2] = 1 - labels[:, 2]
 
-            # Flip left-right
-            if random.random() < hyp["fliplr"]:
-                img = np.fliplr(img)
-                if nl:
-                    labels[:, 1] = 1 - labels[:, 1]
+            # # Flip left-right
+            # if random.random() < hyp["fliplr"]:
+            #     img = np.fliplr(img)
+            #     if nl:
+            #         labels[:, 1] = 1 - labels[:, 1]
 
             # Cutouts
             # labels = cutout(img, labels, p=0.5)
             # nl = len(labels)  # update after cutout
 
-        labels_out = torch.zeros((nl, 6))
+        labels_out = torch.zeros((nl, 7)) #//todo changed from 6 to 7
         if nl:
             labels_out[:, 1:] = torch.from_numpy(labels)
 
@@ -1163,8 +1164,8 @@ def verify_image_label(args):
                     lb = np.concatenate((classes.reshape(-1, 1), segments2boxes(segments)), 1)  # (cls, xywh)
                 lb = np.array(lb, dtype=np.float32)
             nl = len(lb)
-            if nl:
-                assert lb.shape[1] == 5, f"labels require 5 columns, {lb.shape[1]} columns detected"
+            if nl: #//todo changed from 5 to 6
+                assert lb.shape[1] == 6, f"labels require 6 columns, {lb.shape[1]} columns detected"
                 assert (lb >= 0).all(), f"negative label values {lb[lb < 0]}"
                 assert (lb[:, 1:] <= 1).all(), f"non-normalized or out of bounds coordinates {lb[:, 1:][lb[:, 1:] > 1]}"
                 _, i = np.unique(lb, axis=0, return_index=True)

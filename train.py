@@ -24,7 +24,7 @@ import time
 from copy import deepcopy
 from datetime import datetime, timedelta
 from pathlib import Path
-
+import pdb
 try:
     import comet_ml  # must be imported before torch (if installed)
 except ImportError:
@@ -331,11 +331,14 @@ def train(hyp, opt, device, callbacks):
     # DDP mode
     if cuda and RANK != -1:
         model = smart_DDP(model)
-
+    hyptheta = hyp["cls"]
     # Model attributes
     nl = de_parallel(model).model[-1].nl  # number of detection layers (to scale hyps)
     hyp["box"] *= 3 / nl  # scale to layers
     hyp["cls"] *= nc / 80 * 3 / nl  # scale to classes and layers
+    #//todo loss Added
+    hyp["theta"] = hyptheta* 4 / 80 * 3 / nl  # scale to classes and layers
+    
     hyp["obj"] *= (imgsz / 640) ** 2 * 3 / nl  # scale to image size and layers
     hyp["label_smoothing"] = opt.label_smoothing
     model.nc = nc  # attach number of classes to model
@@ -376,11 +379,12 @@ def train(hyp, opt, device, callbacks):
         # b = int(random.uniform(0.25 * imgsz, 0.75 * imgsz + gs) // gs * gs)
         # dataset.mosaic_border = [b - imgsz, -b]  # height, width borders
 
-        mloss = torch.zeros(3, device=device)  # mean losses
+        mloss = torch.zeros(4, device=device)  # mean losses #//todo from 3 to 4
         if RANK != -1:
             train_loader.sampler.set_epoch(epoch)
         pbar = enumerate(train_loader)
-        LOGGER.info(("\n" + "%11s" * 7) % ("Epoch", "GPU_mem", "box_loss", "obj_loss", "cls_loss", "Instances", "Size"))
+        #//todo 7 to 8
+        LOGGER.info(("\n" + "%11s" * 8) % ("Epoch", "GPU_mem", "box_loss", "obj_loss", "cls_loss", "rot_loss" ,"Instances", "Size"))
         if RANK in {-1, 0}:
             pbar = tqdm(pbar, total=nb, bar_format=TQDM_BAR_FORMAT)  # progress bar
         optimizer.zero_grad()
@@ -411,6 +415,7 @@ def train(hyp, opt, device, callbacks):
             # Forward
             with torch.cuda.amp.autocast(amp):
                 pred = model(imgs)  # forward
+                # pdb.set_trace()
                 loss, loss_items = compute_loss(pred, targets.to(device))  # loss scaled by batch_size
                 if RANK != -1:
                     loss *= WORLD_SIZE  # gradient averaged between devices in DDP mode
@@ -436,7 +441,7 @@ def train(hyp, opt, device, callbacks):
                 mloss = (mloss * i + loss_items) / (i + 1)  # update mean losses
                 mem = f"{torch.cuda.memory_reserved() / 1E9 if torch.cuda.is_available() else 0:.3g}G"  # (GB)
                 pbar.set_description(
-                    ("%11s" * 2 + "%11.4g" * 5)
+                    ("%11s" * 2 + "%11.4g" * 6) #//todo 5 to 6
                     % (f"{epoch}/{epochs - 1}", mem, *mloss, targets.shape[0], imgs.shape[-1])
                 )
                 callbacks.run("on_train_batch_end", model, ni, imgs, targets, paths, list(mloss))

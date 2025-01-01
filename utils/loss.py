@@ -138,10 +138,13 @@ class ComputeLoss:
 
     def __call__(self, p, targets):  # predictions, targets
         """Performs forward pass, calculating class, box, and object loss for given predictions and targets."""
+        #//todo ltheta and theta is added
         lcls = torch.zeros(1, device=self.device)  # class loss
         lbox = torch.zeros(1, device=self.device)  # box loss
         lobj = torch.zeros(1, device=self.device)  # object loss
-        tcls, tbox, indices, anchors = self.build_targets(p, targets)  # targets
+        ltheta = torch.zeros(1, device=self.device)  # bin class loss
+        
+        tcls, tbox, indices, anchors, ttheta = self.build_targets(p, targets)  # targets
 
         # Losses
         for i, pi in enumerate(p):  # layer index, layer predictions
@@ -150,8 +153,9 @@ class ComputeLoss:
 
             n = b.shape[0]  # number of targets
             if n:
+                #//todo Ptheta is added also 4 in split
                 # pxy, pwh, _, pcls = pi[b, a, gj, gi].tensor_split((2, 4, 5), dim=1)  # faster, requires torch 1.8.0
-                pxy, pwh, _, pcls = pi[b, a, gj, gi].split((2, 2, 1, self.nc), 1)  # target-subset of predictions
+                pxy, pwh, _, pcls, ptheta = pi[b, a, gj, gi].split((2, 2, 1, self.nc, 4), 1)  # target-subset of predictions
 
                 # Regression
                 pxy = pxy.sigmoid() * 2 - 0.5
@@ -174,6 +178,10 @@ class ComputeLoss:
                     t = torch.full_like(pcls, self.cn, device=self.device)  # targets
                     t[range(n), tcls[i]] = self.cp
                     lcls += self.BCEcls(pcls, t)  # BCE
+                    
+                    t = torch.full_like(ptheta, self.cn, device=self.device)  # targets
+                    t[range(n), ttheta[i]] = self.cp
+                    ltheta += self.BCEcls(ptheta, t)  # BCE
 
                 # Append targets to text file
                 # with open('targets.txt', 'a') as file:
@@ -189,17 +197,19 @@ class ComputeLoss:
         lbox *= self.hyp["box"]
         lobj *= self.hyp["obj"]
         lcls *= self.hyp["cls"]
+        ltheta *= self.hyp["theta"]
         bs = tobj.shape[0]  # batch size
 
-        return (lbox + lobj + lcls) * bs, torch.cat((lbox, lobj, lcls)).detach()
+        return (lbox + lobj + lcls + ltheta) * bs, torch.cat((lbox, lobj, lcls, ltheta)).detach()
 
     def build_targets(self, p, targets):
         """Prepares model targets from input targets (image,class,x,y,w,h) for loss computation, returning class, box,
         indices, and anchors.
         """
+        #//! input target (image,class, x,y,w,h,theta) 
         na, nt = self.na, targets.shape[0]  # number of anchors, targets
-        tcls, tbox, indices, anch = [], [], [], []
-        gain = torch.ones(7, device=self.device)  # normalized to gridspace gain
+        tcls, tbox, indices, anch, ttheta = [], [], [], [], []
+        gain = torch.ones(8, device=self.device)  # normalized to gridspace gain #//todo 1 is added for theta
         ai = torch.arange(na, device=self.device).float().view(na, 1).repeat(1, nt)  # same as .repeat_interleave(nt)
         targets = torch.cat((targets.repeat(na, 1, 1), ai[..., None]), 2)  # append anchor indices
 
@@ -222,9 +232,9 @@ class ComputeLoss:
         for i in range(self.nl):
             anchors, shape = self.anchors[i], p[i].shape
             gain[2:6] = torch.tensor(shape)[[3, 2, 3, 2]]  # xyxy gain
-
+            gain[6] = torch.tensor([4]) #//todo normalized data is converted to bins
             # Match targets to anchors
-            t = targets * gain  # shape(3,n,7)
+            t = targets * gain  # shape(3,n,7) #//! new shape (3,n,8)
             if nt:
                 # Matches
                 r = t[..., 4:6] / anchors[:, None]  # wh ratio
@@ -245,8 +255,9 @@ class ComputeLoss:
                 offsets = 0
 
             # Define
-            bc, gxy, gwh, a = t.chunk(4, 1)  # (image, class), grid xy, grid wh, anchors
-            a, (b, c) = a.long().view(-1), bc.long().T  # anchors, image, class
+            bc, gxy, gwh, arot = t.chunk(4, 1)  # (image, class), grid xy, grid wh, anchors
+            (rot,a), (b, c) = arot.long().T, bc.long().T  # anchors, image, class
+            a = a.view(-1)
             gij = (gxy - offsets).long()
             gi, gj = gij.T  # grid indices
 
@@ -255,5 +266,6 @@ class ComputeLoss:
             tbox.append(torch.cat((gxy - gij, gwh), 1))  # box
             anch.append(anchors[a])  # anchors
             tcls.append(c)  # class
+            ttheta.append(rot) # rotation bin class
 
-        return tcls, tbox, indices, anch
+        return tcls, tbox, indices, anch, ttheta
