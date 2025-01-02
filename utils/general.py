@@ -1049,7 +1049,7 @@ def non_max_suppression(
     merge = False  # use merge-NMS
 
     t = time.time()
-    mi = 5 + nc  # mask start index #//todo edit this and output is list
+    mi = 5 + nc # mask start index #//todo edit this and output is list
     output = [torch.zeros((0, 6 + nm), device=prediction.device)] * bs
     for xi, x in enumerate(prediction):  # image index, image inference
         # Apply constraints
@@ -1070,7 +1070,7 @@ def non_max_suppression(
             continue
 
         # Compute conf
-        x[:, 5:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
+        x[:, 5:mi] *= x[:, 4:5]  # conf = obj_conf * cls_conf
 
         # Box/Mask
         box = xywh2xyxy(x[:, :4])  # center_x, center_y, width, height) to (x1, y1, x2, y2)
@@ -1082,7 +1082,11 @@ def non_max_suppression(
             x = torch.cat((box[i], x[i, 5 + j, None], j[:, None].float(), mask[i]), 1)
         else:  # best class only
             conf, j = x[:, 5:mi].max(1, keepdim=True)
-            x = torch.cat((box, conf, j.float(), mask), 1)[conf.view(-1) > conf_thres]
+            rot_conf, theta = x[:,mi:].max(1,keepdim=True)
+            theta *= 90
+            x = torch.cat((box, conf, j.float(), theta.float()), 1)[conf.view(-1) > conf_thres]
+
+
 
         # Filter by class
         if classes is not None:
