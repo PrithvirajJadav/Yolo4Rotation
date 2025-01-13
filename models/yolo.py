@@ -80,7 +80,7 @@ class Detect(nn.Module):
         """Initializes YOLOv5 detection layer with specified classes, anchors, channels, and inplace operations."""
         super().__init__()
         self.nc = nc  # number of classes
-        self.no = nc + 5 + 4 # number of outputs per anchor #//todo 4 bins are added
+        self.no = nc + 5 + 24 # number of outputs per anchor #//todo 4 bins are added
         self.nl = len(anchors)  # number of detection layers
         self.na = len(anchors[0]) // 2  # number of anchors
         self.grid = [torch.empty(0) for _ in range(self.nl)]  # init grid
@@ -107,7 +107,7 @@ class Detect(nn.Module):
                     wh = (wh.sigmoid() * 2) ** 2 * self.anchor_grid[i]  # wh
                     y = torch.cat((xy, wh, conf.sigmoid(), mask), 4)
                 else:  # Detect (boxes only)
-                    xy, wh, conf = x[i].sigmoid().split((2, 2, self.nc + 1 + 4), 4)
+                    xy, wh, conf = x[i].sigmoid().split((2, 2, self.nc + 1 + 24), 4) #//todo Required to add 24
                     xy = (xy * 2 + self.grid[i]) * self.stride[i]  # xy
                     wh = (wh * 2) ** 2 * self.anchor_grid[i]  # wh
                     y = torch.cat((xy, wh, conf), 4)

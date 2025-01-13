@@ -1036,7 +1036,7 @@ def non_max_suppression(
     if mps:  # MPS not fully supported yet, convert tensors to CPU before NMS
         prediction = prediction.cpu()
     bs = prediction.shape[0]  # batch size
-    nc = prediction.shape[2] - nm - 5 - 4 # number of classes #//todo - 4
+    nc = prediction.shape[2] - nm - 5 - 24 # number of classes #//todo - 24
     xc = prediction[..., 4] > conf_thres  # candidates
 
     # Settings
@@ -1083,7 +1083,7 @@ def non_max_suppression(
         else:  # best class only
             conf, j = x[:, 5:mi].max(1, keepdim=True)
             rot_conf, theta = x[:,mi:].max(1,keepdim=True)
-            theta *= 90
+            theta *= 15
             x = torch.cat((box, conf, j.float(), theta.float()), 1)[conf.view(-1) > conf_thres]
 
 
