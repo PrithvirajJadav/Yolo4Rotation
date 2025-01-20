@@ -337,7 +337,7 @@ def train(hyp, opt, device, callbacks):
     hyp["box"] *= 3 / nl  # scale to layers
     hyp["cls"] *= nc / 80 * 3 / nl  # scale to classes and layers
     #//todo loss Added
-    hyp["theta"] = hyptheta* 24 / 80 * 3 / nl  # scale to classes and layers
+    hyp["theta"] = hyptheta* 4 / 80 * 3 / nl  # scale to classes and layers
     
     hyp["obj"] *= (imgsz / 640) ** 2 * 3 / nl  # scale to image size and layers
     hyp["label_smoothing"] = opt.label_smoothing

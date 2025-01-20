@@ -153,9 +153,9 @@ class ComputeLoss:
 
             n = b.shape[0]  # number of targets
             if n:
-                #//todo Ptheta is added also 24 in split
+                #//todo Ptheta is added also 4 in split
                 # pxy, pwh, _, pcls = pi[b, a, gj, gi].tensor_split((2, 4, 5), dim=1)  # faster, requires torch 1.8.0
-                pxy, pwh, _, pcls, ptheta = pi[b, a, gj, gi].split((2, 2, 1, self.nc, 24), 1)  # target-subset of predictions
+                pxy, pwh, _, pcls, ptheta = pi[b, a, gj, gi].split((2, 2, 1, self.nc, 4), 1)  # target-subset of predictions
 
                 # Regression
                 pxy = pxy.sigmoid() * 2 - 0.5
@@ -179,9 +179,9 @@ class ComputeLoss:
                     t[range(n), tcls[i]] = self.cp
                     lcls += self.BCEcls(pcls, t)  # BCE
                     
-                    tp = torch.full_like(ptheta, self.cn, device=self.device)  # targets
-                    tp[range(n), ttheta[i]] = self.cp
-                    ltheta += self.BCEcls(ptheta, tp)  # BCE
+                    t = torch.full_like(ptheta, self.cn, device=self.device)  # targets
+                    t[range(n), ttheta[i]] = self.cp
+                    ltheta += self.BCEcls(ptheta, t)  # BCE
 
                 # Append targets to text file
                 # with open('targets.txt', 'a') as file:
@@ -232,12 +232,9 @@ class ComputeLoss:
         for i in range(self.nl):
             anchors, shape = self.anchors[i], p[i].shape
             gain[2:6] = torch.tensor(shape)[[3, 2, 3, 2]]  # xyxy gain
-            gain[6] = torch.tensor([360]) #//todo normalized data is converted to bins
+            gain[6] = torch.tensor([4]) #//todo normalized data is converted to bins
             # Match targets to anchors
             t = targets * gain  # shape(3,n,7) #//! new shape (3,n,8)
-            for i in range(3):
-              t[i][:,6] = torch.round(t[i][:,6]/15)
-            
             if nt:
                 # Matches
                 r = t[..., 4:6] / anchors[:, None]  # wh ratio
@@ -261,7 +258,6 @@ class ComputeLoss:
             bc, gxy, gwh, arot = t.chunk(4, 1)  # (image, class), grid xy, grid wh, anchors
             (rot,a), (b, c) = arot.long().T, bc.long().T  # anchors, image, class
             a = a.view(-1)
-            rot %= 24
             gij = (gxy - offsets).long()
             gi, gj = gij.T  # grid indices
 
