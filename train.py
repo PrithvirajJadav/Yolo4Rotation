@@ -471,6 +471,7 @@ def train(hyp, opt, device, callbacks):
                     plots=False,
                     callbacks=callbacks,
                     compute_loss=compute_loss,
+                    conf_thres=0.4,
                 )
 
             # Update best mAP
@@ -534,6 +535,7 @@ def train(hyp, opt, device, callbacks):
                         save_json=is_coco,
                         verbose=True,
                         plots=plots,
+                        conf_thres = 0.4,
                         callbacks=callbacks,
                         compute_loss=compute_loss,
                     )  # val best model with plots
